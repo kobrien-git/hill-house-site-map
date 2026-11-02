@@ -71,7 +71,6 @@ footer{font-size:11px;color:var(--muted);padding:8px 18px;border-top:1px solid v
       <button data-t="site" class="on">Site</button>
       <button data-t="house">Existing house</button>
       <button data-t="age">Age</button>
-      <button data-t="brief">Brief</button>
       <button data-t="question">Planning</button>
     </nav>
     <div id="content"></div>
@@ -91,11 +90,6 @@ footer{font-size:11px;color:var(--muted);padding:8px 18px;border-top:1px solid v
   <h2>Designations (Cork CDP 2022-2028)</h2>
   <div><span class="tag">Mitchelstown Greenbelt GB 1-1</span><span class="tag">High Value Landscape</span><span class="tag">Blackwater SAC catchment</span></div>
   <div><span class="tag no">Not a Protected Structure</span><span class="tag no">Not in an ACA</span><span class="tag no">Not on the NIAH</span></div>
-  <h2>To keep</h2>
-  <ul>
-    <li>Stone outbuildings and the ruin in the yard.</li>
-    <li>Mature trees and field boundaries.</li>
-  </ul>
   <div class="ctrl">
     <button class="btn" onclick="go('house')">Zoom to house</button>
     <button class="btn" onclick="go('site')">Zoom to farmyard</button>
@@ -118,7 +112,7 @@ footer{font-size:11px;color:var(--muted);padding:8px 18px;border-top:1px solid v
   </ul>
   <div class="note">The <b style="color:#c0392b">red</b> (ground floor) and <b style="color:#b59a00">yellow</b> (roof) outlines on the map are traced from that drawing. They were placed by eye against the 2021 drone image, so treat their position as about ±1-2 m. The .dwg itself (sent separately) has the true dimensions.</div>
   <h2>Site photos</h2>
-  <p>Click any dot on the map to see the photo taken from that spot. Use the <b>Layers</b> panel (top right of the map) to switch things on and off. <span class="dot" style="background:var(--y2026)"></span>2026 drone and <span class="dot" style="background:var(--y2021)"></span>2021 drone. Hover over or open a photo to see which way the camera was pointing.</p>
+  <p>Turn on the drone photos in the <b>Layers</b> panel (top right of the map), then click any dot to see the photo taken from that spot. <span class="dot" style="background:var(--y2026)"></span>2026 drone and <span class="dot" style="background:var(--y2021)"></span>2021 drone. Hover over or open a photo to see which way the camera was pointing.</p>
 </template>
 
 <template id="t-age">
@@ -144,19 +138,6 @@ footer{font-size:11px;color:var(--muted);padding:8px 18px;border-top:1px solid v
   <p class="note">The historic maps are screen captures georeferenced by hand, so expect a few metres of drift.</p>
 </template>
 
-<template id="t-brief">
-  <h2>What we're after</h2>
-  <ul>
-    <li>Roughly 200-220 m². Possibly a simple two-storey block with a single-storey living wing.</li>
-    <li><b>Ground floor:</b> open-plan kitchen/living/dining, playroom, drawing room, small WC, pantry and boot/utility room.</li>
-    <li><b>Upstairs:</b> master suite with walk-in wardrobe, shower and double sinks. Three bedrooms, one with a small en suite. A main bathroom with bath and shower.</li>
-    <li>We both work from home, so office space matters.</li>
-    <li><b>Nice to have:</b> a covered terrace, good ceiling height in the living space, and big glazing to the views.</li>
-    <li>A high standard of design and a very sustainable build. We'd like to reuse stone from the site where possible.</li>
-  </ul>
-  <h2>Background</h2>
-  <p>An earlier scheme of about 295 m² came in well over budget. We're stepping back to rethink size, form and approach from scratch.</p>
-</template>
 
 <template id="t-question">
   <h2>The big question</h2>
@@ -166,6 +147,12 @@ footer{font-size:11px;color:var(--muted);padding:8px 18px;border-top:1px solid v
     <li>Replacing a habitable dwelling (RP 5-29) means the usual rural-housing need test and occupancy clause shouldn't apply.</li>
     <li>The greenbelt (RP 5-19/5-20) and High Value Landscape (GI 14-9/14-10) rules call for a higher design standard.</li>
     <li>Wastewater will need an on-site treatment system (RP 5-23), and the Blackwater SAC makes this a sensitive catchment.</li>
+  </ul>
+  <h2>Planning history nearby</h2>
+  <ul>
+    <li><b>Cork Co. Co. 19/5319, ABP PL04.305131:</b> Sinéad O'Brien and Emmet Campion, Corracunna. A new dwelling, detached garage and wastewater treatment system.</li>
+    <li>The council granted permission, but Transport Infrastructure Ireland (TII) appealed to An Bord Pleanála as a third party. The application was then withdrawn (s.140) on 4 Sep 2019, before ABP made a decision. <a href="https://www.pleanala.ie/en-ie/case/305131" target="_blank" rel="noopener">Case page</a></li>
+    <li>This shows TII takes an interest in new development here, so access and traffic will need care.</li>
   </ul>
   <div class="note">We'd value your honest view on both routes: what each would mean for cost, structure and planning risk. That includes whether keeping part of the original house is realistic.</div>
 </template>
@@ -226,7 +213,7 @@ P.forEach(p=>{
 });
 function compass(d){ return ['N','NE','E','SE','S','SW','W','NW'][Math.round(((d%360)+360)%360/45)%8]; }
 
-['drone','ground','roof','p2026','p2021'].forEach(k=>lay[k].addTo(map));
+['ground','roof'].forEach(k=>lay[k].addTo(map));
 
 const views = { house:[S.centre,20], site:[S.centre,19], wide:[S.centre,16] };
 function go(k){ map.flyTo(views[k][0], views[k][1], {duration:.8}); }
