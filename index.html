@@ -48,7 +48,12 @@ html,body{margin:0;height:100%;font:14px/1.5 system-ui,-apple-system,"Segoe UI",
 .lc-sec:first-child{margin-top:2px}
 .lc label{display:flex;align-items:center;gap:7px;margin:3px 0;cursor:pointer;color:var(--ink)}
 .lc input[type=range]{width:100%}
-.sw{display:inline-block;width:14px;height:3px;border-radius:2px}
+.sw{display:inline-block;width:14px;height:3px;border-radius:2px;flex:none}
+.lg{display:none;margin:0 0 4px 22px;font-size:11.5px;color:var(--muted)}
+.lg.on{display:block}
+.lg div{display:flex;align-items:center;gap:6px;margin:1px 0}
+.lg i{display:inline-block;width:11px;height:11px;border-radius:2px;flex:none}
+.pp b{display:block;margin-bottom:2px}.pp{font-size:12.5px;max-width:280px}.pp .m{color:#6b665b;font-size:11.5px}
 @media (max-width:760px){.lc{min-width:0;max-height:45vh}}
 #lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:9999;cursor:zoom-out}
 #lightbox img{max-width:95vw;max-height:92vh}
@@ -74,7 +79,7 @@ footer{font-size:11px;color:var(--muted);padding:8px 18px;border-top:1px solid v
       <button data-t="question">Planning</button>
     </nav>
     <div id="content"></div>
-    <footer>Historic maps &amp; 2013-18 aerial: screenshots from Tailte Éireann (© Tailte Éireann / Government of Ireland), indicative only. Imagery © Esri. Basemap © OpenStreetMap contributors.</footer>
+    <footer>Historic maps &amp; 2013-18 aerial: screenshots from Tailte Éireann (© Tailte Éireann / Government of Ireland), indicative only. Imagery © Esri. Basemap © OpenStreetMap contributors. Planning layers: Cork County Development Plan 2022-2028, NIAH, SMR and planning applications from public open data (indicative; check the official maps).</footer>
   </aside>
   <div id="map"></div>
 </div>
@@ -160,14 +165,18 @@ footer{font-size:11px;color:var(--muted);padding:8px 18px;border-top:1px solid v
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/data.js"></script>
+<script src="data/planning.js"></script>
 <script>
 const S = window.SITE, P = window.PHOTOS;
 const map = L.map('map', {zoomControl:true, maxZoom:22}).setView(S.centre, 19);
+const esriImg = ()=>L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxNativeZoom:19, maxZoom:22, attribution:'Imagery © Esri, Maxar, Earthstar Geographics'});
+const esriRef = n=>L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/'+n+'/MapServer/tile/{z}/{y}/{x}', {maxNativeZoom:19, maxZoom:22});
 const base = {
-  esri: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxNativeZoom:19, maxZoom:22, attribution:'Imagery © Esri, Maxar, Earthstar Geographics'}),
+  hybrid: L.layerGroup([esriImg(), esriRef('World_Transportation'), esriRef('World_Boundaries_and_Places')]),
+  esri: esriImg(),
   osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxNativeZoom:19, maxZoom:22, attribution:'© OpenStreetMap contributors'})
 };
-base.esri.addTo(map);
+base.hybrid.addTo(map);
 L.control.scale({imperial:false}).addTo(map);
 
 const hist = {
@@ -231,6 +240,30 @@ function tab(t){
   if(t==='age' && !histOn) showHist('h3');
 }
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
+// ---- Cork CDP 2022 planning layers (clipped to ~3.5 km; applications within 1.5 km) ----
+map.createPane('plan'); map.getPane('plan').style.zIndex=350;
+map.createPane('planpts'); map.getPane('planpts').style.zIndex=450;
+const ZC = {'Greenbelt1':'#5fa84f','Greenbelt2':'#9ccc65','Green Infrastructure':'#1e7d4f','Agriculture':'#cdbb5a','Residential':'#e8a33d','Existing Residential/Mixed Residential and Other Uses':'#f3cd7e','Town Centre/Neighbourhood Centres':'#c0392b','Community':'#4aa3df','Industry':'#6c4bc4','Business and General Employment':'#9b59b6','Existing Mixed/General Business/Industrial Uses':'#b9a3e3','Special Policy Area':'#e84393','Utility and Infrastructure':'#7f8c8d'};
+const ZL = {'Greenbelt1':'Greenbelt (GB1)','Greenbelt2':'Greenbelt (GB2)'};
+const OC = {granted:'#27ae60', refused:'#c0392b', 'no decision recorded':'#95a5a6'};
+const esc = t=>String(t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const lnk = (u,t)=> u ? `<br><a href="${esc(u)}" target="_blank" rel="noopener">${t}</a>` : '';
+const PL = window.PLAN || {};
+const gj = (k,opt)=> L.geoJSON(PL[k]||{type:'FeatureCollection',features:[]}, Object.assign({pane:'plan'},opt));
+const pt = (col)=>({pointToLayer:(f,ll)=>L.circleMarker(ll,{pane:'planpts',radius:5,color:'#fff',weight:1.2,fillColor:col,fillOpacity:1})});
+Object.assign(lay, {
+  zoning: gj('zoning',{style:f=>{const g=/^Greenbelt/.test(f.properties.use); return {color:ZC[f.properties.use]||'#888',weight:g?2.5:1,fillColor:ZC[f.properties.use]||'#888',fillOpacity:g?.18:.4};},
+    onEachFeature:(f,l)=>l.bindPopup(`<div class="pp"><b>${esc(f.properties.zone)} · ${esc(ZL[f.properties.use]||f.properties.use)}</b>${esc(f.properties.desc!==f.properties.use?f.properties.desc:'')}${lnk(f.properties.link,'Zoning objectives (Cork CDP 2022)')}</div>`)}),
+  devb: gj('devb',{style:{color:'#c0392b',weight:3,dashArray:'8 5',fill:false},interactive:false}),
+  hvl: gj('hvl',{style:{color:'#d35400',weight:1.5,dashArray:'4 4',fillColor:'#d35400',fillOpacity:.12},interactive:false}),
+  rhpa: gj('rhpa',{style:{color:'#444',weight:2,dashArray:'2 5',fill:true,fillOpacity:0},onEachFeature:(f,l)=>l.bindTooltip('Rural housing policy area: '+esc(f.properties.type),{sticky:true})}),
+  scenic: gj('scenic',{style:{color:'#e91e63',weight:4,dashArray:'10 6'},onEachFeature:(f,l)=>l.bindPopup(`<div class="pp"><b>Scenic route ${esc(f.properties.ref)}</b>${esc(f.properties.desc)}</div>`)}),
+  rps: gj('rps',Object.assign(pt('#8e44ad'),{onEachFeature:(f,l)=>l.bindPopup(`<div class="pp"><b>Protected structure RPS ${esc(f.properties.id)}</b>${esc(f.properties.name)}</div>`)})),
+  niah: gj('niah',Object.assign(pt('#2980b9'),{onEachFeature:(f,l)=>l.bindPopup(`<div class="pp"><b>NIAH ${esc(f.properties.reg)}</b>${esc(f.properties.name)}<div class="m">${esc(f.properties.date)} · ${esc(f.properties.rating)}</div>${lnk(f.properties.link,'Buildings of Ireland record')}</div>`)})),
+  smr: gj('smr',Object.assign(pt('#795548'),{onEachFeature:(f,l)=>l.bindPopup(`<div class="pp"><b>${esc(f.properties.cls)}</b><div class="m">${esc(f.properties.id)}</div>${lnk(f.properties.link,'Historic Environment Viewer')}</div>`)})),
+  apps: gj('apps',{style:f=>({color:OC[f.properties.out]||'#95a5a6',weight:2,fillColor:OC[f.properties.out]||'#95a5a6',fillOpacity:.35}),
+    onEachFeature:(f,l)=>{const p=f.properties; l.bindPopup(`<div class="pp"><b>${esc(p.ref)} · ${esc(p.out)}</b>${esc(p.desc)}<div class="m">${esc(p.addr)}${p.rec?' · received '+esc(p.rec):''}${p.appeal?' · appeal: '+esc(p.appeal):''}</div>${lnk(p.link,'Council planning file')}</div>`);}})
+});
 const LC = L.control({position:'topright'});
 LC.onAdd = function(){
   const d = L.DomUtil.create('div','lc');
@@ -253,8 +286,21 @@ LC.onAdd = function(){
     <label><input type="radio" name="hist" value="a1318"> Aerial 2013-18</label>
     <div class="lc-sec">Historic map opacity</div>
     <input type="range" min="0" max="100" value="80">
+    <div class="lc-sec">Cork CDP 2022 &amp; planning</div>
+    <label><input type="checkbox" data-l="zoning"> <span class="sw" style="background:#5fa84f;height:10px"></span>Land use zoning (incl. greenbelt)</label>
+    <div class="lg" id="zlg"></div>
+    <label><input type="checkbox" data-l="devb"> <span class="sw" style="background:#c0392b"></span>Mitchelstown development boundary</label>
+    <label><input type="checkbox" data-l="hvl"> <span class="sw" style="background:#d35400;height:10px;opacity:.5"></span>High Value Landscape</label>
+    <label><input type="checkbox" data-l="rhpa"> <span class="sw" style="background:#555"></span>Rural housing policy areas</label>
+    <label><input type="checkbox" data-l="scenic"> <span class="sw" style="background:#e91e63"></span>Scenic routes</label>
+    <label><input type="checkbox" data-l="rps"> <span class="dot" style="background:#8e44ad"></span>Protected structures (RPS)</label>
+    <label><input type="checkbox" data-l="niah"> <span class="dot" style="background:#2980b9"></span>NIAH buildings</label>
+    <label><input type="checkbox" data-l="smr"> <span class="dot" style="background:#795548"></span>Archaeological monuments</label>
+    <label><input type="checkbox" data-l="apps"> <span class="sw" style="background:#27ae60;height:10px"></span>Planning applications (1.5 km)</label>
+    <div class="lg" id="alg"></div>
     <div class="lc-sec">Background</div>
-    <label><input type="radio" name="base" value="esri" checked> Satellite</label>
+    <label><input type="radio" name="base" value="hybrid" checked> Satellite with labels</label>
+    <label><input type="radio" name="base" value="esri"> Satellite</label>
     <label><input type="radio" name="base" value="osm"> Street map</label>
   </div>`;
   L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
@@ -270,6 +316,14 @@ LC.onAdd = function(){
   return d;
 };
 LC.addTo(map);
+(function(){
+  const z=document.getElementById('zlg'), a=document.getElementById('alg');
+  const used=[...new Set((PL.zoning?.features||[]).map(f=>f.properties.use))].sort((a,b)=>(/^Greenbelt/.test(b)-/^Greenbelt/.test(a))||a.localeCompare(b));
+  z.innerHTML=used.map(u=>`<div><i style="background:${ZC[u]||'#888'}"></i>${esc(ZL[u]||u)}</div>`).join('');
+  a.innerHTML=Object.entries(OC).map(([k,c])=>`<div><i style="background:${c}"></i>${esc(k[0].toUpperCase()+k.slice(1))}</div>`).join('');
+  const sync=()=>{ z.classList.toggle('on',map.hasLayer(lay.zoning)); a.classList.toggle('on',map.hasLayer(lay.apps)); };
+  map.on('layeradd layerremove',sync); sync();
+})();
 tab('site');
 </script>
 </body>
