@@ -38,6 +38,18 @@ html,body{margin:0;height:100%;font:14px/1.5 system-ui,-apple-system,"Segoe UI",
 .leaflet-popup-content img{display:block;max-width:300px;max-height:300px;border-radius:4px}
 .pcap{font-size:12px;color:var(--muted);margin-top:4px}
 #toggle{display:none}
+.lc{background:var(--panel);border:2px solid var(--accent);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.3);font-size:13px;min-width:230px;max-height:calc(100vh - 40px);overflow-y:auto}
+.lc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer;user-select:none;font-size:14px}
+.lc-head .chev{transition:transform .2s}
+.lc.closed .chev{transform:rotate(-90deg)}
+.lc.closed .lc-body{display:none}
+.lc-body{padding:8px 12px 10px}
+.lc-sec{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:8px 0 3px;font-weight:600}
+.lc-sec:first-child{margin-top:2px}
+.lc label{display:flex;align-items:center;gap:7px;margin:3px 0;cursor:pointer;color:var(--ink)}
+.lc input[type=range]{width:100%}
+.sw{display:inline-block;width:14px;height:3px;border-radius:2px}
+@media (max-width:760px){.lc{min-width:0;max-height:45vh}}
 #lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:9999;cursor:zoom-out}
 #lightbox img{max-width:95vw;max-height:92vh}
 footer{font-size:11px;color:var(--muted);padding:8px 18px;border-top:1px solid var(--line)}
@@ -61,7 +73,6 @@ footer{font-size:11px;color:var(--muted);padding:8px 18px;border-top:1px solid v
       <button data-t="age">Age</button>
       <button data-t="brief">Brief</button>
       <button data-t="question">Planning</button>
-      <button data-t="layers">Map layers</button>
     </nav>
     <div id="content"></div>
     <footer>Historic maps &amp; 2013-18 aerial: screenshots from Tailte Éireann (© Tailte Éireann / Government of Ireland), indicative only. Imagery © Esri. Basemap © OpenStreetMap contributors.</footer>
@@ -107,7 +118,7 @@ footer{font-size:11px;color:var(--muted);padding:8px 18px;border-top:1px solid v
   </ul>
   <div class="note">The <b style="color:#c0392b">red</b> (ground floor) and <b style="color:#b59a00">yellow</b> (roof) outlines on the map are traced from that drawing. They were placed by eye against the 2021 drone image, so treat their position as about ±1-2 m. The .dwg itself (sent separately) has the true dimensions.</div>
   <h2>Site photos</h2>
-  <p>Click any dot on the map to see the photo taken from that spot. <span class="dot" style="background:var(--y2026)"></span>2026 drone and <span class="dot" style="background:var(--y2021)"></span>2021 drone. Hover over or open a photo to see which way the camera was pointing.</p>
+  <p>Click any dot on the map to see the photo taken from that spot. Use the <b>Layers</b> panel (top right of the map) to switch things on and off. <span class="dot" style="background:var(--y2026)"></span>2026 drone and <span class="dot" style="background:var(--y2021)"></span>2021 drone. Hover over or open a photo to see which way the camera was pointing.</p>
 </template>
 
 <template id="t-age">
@@ -121,14 +132,16 @@ footer{font-size:11px;color:var(--muted);padding:8px 18px;border-top:1px solid v
   <p>This matters for planning. Because it's a later building, its heritage significance is likely to be modest, although it is still a vernacular building under the Development Plan.</p>
   <img class="thumb" src="img/Hill_House_historic_map_comparison.png" alt="Historic map comparison" onclick="lb(this.src)">
   <div class="ctrl">
-    <div class="lbl">Overlay a historic map on the live map:</div>
+    <div class="lbl">Overlay a historic map on the live map (or use the Layers panel on the map):</div>
     <button class="btn" onclick="showHist('h1')">1840s 6-inch</button>
+    <button class="btn" onclick="showHist('h2')">25-inch 1888-1913</button>
     <button class="btn" onclick="showHist('h3')">Later 6-inch</button>
     <button class="btn" onclick="showHist('a1318')">Aerial 2013-18</button>
     <button class="btn" onclick="showHist(null)">None</button>
     <div class="lbl">Overlay opacity</div>
     <input type="range" min="0" max="100" value="80" oninput="setHistOpacity(this.value)">
   </div>
+  <p class="note">The historic maps are screen captures georeferenced by hand, so expect a few metres of drift.</p>
 </template>
 
 <template id="t-brief">
@@ -157,32 +170,6 @@ footer{font-size:11px;color:var(--muted);padding:8px 18px;border-top:1px solid v
   <div class="note">We'd value your honest view on both routes: what each would mean for cost, structure and planning risk. That includes whether keeping part of the original house is realistic.</div>
 </template>
 
-<template id="t-layers">
-  <h2>Map layers</h2>
-  <div class="ctrl">
-    <div class="lbl">Background</div>
-    <label><input type="radio" name="base" value="esri" checked> Satellite (Esri)</label>
-    <label><input type="radio" name="base" value="osm"> Street map (OSM)</label>
-  </div>
-  <div class="ctrl">
-    <label><input type="checkbox" data-l="drone" checked> 2021 drone image (best match for the site)</label>
-    <label><input type="checkbox" data-l="ground" checked> Existing ground floor (survey)</label>
-    <label><input type="checkbox" data-l="roof" checked> Existing roof plan (survey)</label>
-    <label><input type="checkbox" data-l="p2026" checked> <span class="dot" style="background:var(--y2026)"></span>Photos 2026</label>
-    <label><input type="checkbox" data-l="p2021" checked> <span class="dot" style="background:var(--y2021)"></span>Photos 2021</label>
-    <label><input type="checkbox" data-l="townland"> Townland boundary</label>
-  </div>
-  <div class="ctrl">
-    <div class="lbl">Historic overlay (screenshot)</div>
-    <label><input type="radio" name="hist" value="" checked> None</label>
-    <label><input type="radio" name="hist" value="h1"> OS 6-inch 1st ed. (1829-41)</label>
-    <label><input type="radio" name="hist" value="h3"> OS 6-inch later ed. (20th C)</label>
-    <label><input type="radio" name="hist" value="a1318"> Aerial 2013-18</label>
-    <div class="lbl">Opacity</div>
-    <input type="range" min="0" max="100" value="80" oninput="setHistOpacity(this.value)">
-  </div>
-  <p class="note">The historic maps are screen captures georeferenced by hand, so expect a few metres of drift. Esri satellite imagery is also offset here at some zoom levels. The drone image is the most reliable reference.</p>
-</template>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/data.js"></script>
@@ -198,6 +185,7 @@ L.control.scale({imperial:false}).addTo(map);
 
 const hist = {
   h1: L.imageOverlay('img/1_OS6inch_1stEd_1829-41.png', S.histBounds, {opacity:.8}),
+  h2: L.imageOverlay('img/2_OS25inch_1888-1913.png', S.histBounds, {opacity:.8}),
   h3: L.imageOverlay('img/3_OS6inch_LastEd.png', S.histBounds, {opacity:.8}),
   a1318: L.imageOverlay('img/4_Aerial_2013-18.png', S.histBounds, {opacity:.8})
 };
@@ -252,23 +240,49 @@ function tab(t){
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.t===t));
   content.innerHTML = document.getElementById('t-'+t).innerHTML;
   content.scrollTop = 0;
-  if(t==='layers') wireLayers();
   if(t==='house') go('house');
   if(t==='age' && !histOn) showHist('h3');
 }
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
-function wireLayers(){
-  content.querySelectorAll('input[data-l]').forEach(cb=>{
+const LC = L.control({position:'topright'});
+LC.onAdd = function(){
+  const d = L.DomUtil.create('div','lc');
+  d.innerHTML = `
+  <div class="lc-head"><span>&#9776;&nbsp; Layers</span><span class="chev">&#9662;</span></div>
+  <div class="lc-body">
+    <div class="lc-sec">Site</div>
+    <label><input type="checkbox" data-l="drone"> 2021 drone image</label>
+    <label><input type="checkbox" data-l="ground"> <span class="sw" style="background:#e0352b"></span>Existing ground floor</label>
+    <label><input type="checkbox" data-l="roof"> <span class="sw" style="background:#f2d000"></span>Existing roof plan</label>
+    <label><input type="checkbox" data-l="townland"> <span class="sw" style="background:#999"></span>Townland boundary</label>
+    <div class="lc-sec">Photos</div>
+    <label><input type="checkbox" data-l="p2026"> <span class="dot" style="background:var(--y2026)"></span>2026 drone</label>
+    <label><input type="checkbox" data-l="p2021"> <span class="dot" style="background:var(--y2021)"></span>2021 drone</label>
+    <div class="lc-sec">Historic map</div>
+    <label><input type="radio" name="hist" value="" checked> None</label>
+    <label><input type="radio" name="hist" value="h1"> OS 6-inch, 1829-41</label>
+    <label><input type="radio" name="hist" value="h2"> OS 25-inch, 1888-1913</label>
+    <label><input type="radio" name="hist" value="h3"> OS 6-inch, later ed.</label>
+    <label><input type="radio" name="hist" value="a1318"> Aerial 2013-18</label>
+    <div class="lc-sec">Historic map opacity</div>
+    <input type="range" min="0" max="100" value="80">
+    <div class="lc-sec">Background</div>
+    <label><input type="radio" name="base" value="esri" checked> Satellite</label>
+    <label><input type="radio" name="base" value="osm"> Street map</label>
+  </div>`;
+  L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+  d.querySelector('.lc-head').onclick = ()=>d.classList.toggle('closed');
+  if (window.innerWidth < 760) d.classList.add('closed');
+  d.querySelectorAll('input[data-l]').forEach(cb=>{
     cb.checked = map.hasLayer(lay[cb.dataset.l]);
     cb.onchange = ()=> cb.checked ? lay[cb.dataset.l].addTo(map) : map.removeLayer(lay[cb.dataset.l]);
   });
-  content.querySelectorAll('input[name=base]').forEach(r=>{
-    r.checked = map.hasLayer(base[r.value]);
-    r.onchange = ()=>{ Object.values(base).forEach(b=>map.removeLayer(b)); base[r.value].addTo(map); };
-  });
-  content.querySelectorAll('input[name=hist]').forEach(r=>{ r.checked = r.value===(histOn||''); r.onchange=()=>showHist(r.value); });
-  content.querySelectorAll('input[type=range]').forEach(r=>r.value=Math.round(histOp*100));
-}
+  d.querySelectorAll('input[name=base]').forEach(r=> r.onchange = ()=>{ Object.values(base).forEach(b=>map.removeLayer(b)); base[r.value].addTo(map); });
+  d.querySelectorAll('input[name=hist]').forEach(r=> r.onchange = ()=>showHist(r.value));
+  d.querySelector('input[type=range]').oninput = e=>setHistOpacity(e.target.value);
+  return d;
+};
+LC.addTo(map);
 tab('site');
 </script>
 </body>
